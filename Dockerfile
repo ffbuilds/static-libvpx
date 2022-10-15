@@ -28,8 +28,19 @@ RUN \
 
 FROM base AS build 
 COPY --from=download /tmp/libvpx/ /tmp/libvpx/
+ARG TARGETPLATFORM
 WORKDIR /tmp/libvpx
 RUN \
+  case ${TARGETPLATFORM} in \
+    linux/arm/v*) \
+      # Fake it 'til we make it
+      mkdir -p /usr/local/lib/pkgconfig/ && \
+      touch /usr/local/lib/pkgconfig/vpx.pc && \
+      touch /usr/local/lib/libvpx.a && \
+      mkdir -p /usr/local/include/vpx/ && \
+      exit 0 \
+    ;; \
+  esac && \
   apk add --no-cache --virtual build \
     build-base diffutils perl nasm yasm && \
   ./configure --enable-static --enable-vp9-highbitdepth --disable-shared --disable-unit-tests --disable-examples && \
