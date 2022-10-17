@@ -7,9 +7,10 @@ ARG VPX_VERSION=1.12.0
 ARG VPX_URL="https://github.com/webmproject/libvpx/archive/v$VPX_VERSION.tar.gz"
 ARG VPX_SHA256=f1acc15d0fd0cb431f4bf6eac32d5e932e40ea1186fe78e074254d6d003957bb
 
-# bump: alpine /FROM alpine:([\d.]+)/ docker:alpine|^3
-# bump: alpine link "Release notes" https://alpinelinux.org/posts/Alpine-$LATEST-released.html
-FROM alpine:3.16.2 AS base
+# Must be specified
+ARG ALPINE_VERSION
+
+FROM alpine:${ALPINE_VERSION} AS base
 
 FROM base AS download
 ARG VPX_URL
@@ -42,9 +43,14 @@ RUN \
     ;; \
   esac && \
   apk add --no-cache --virtual build \
-    build-base diffutils perl nasm yasm && \
+    build-base diffutils perl nasm yasm pkgconf && \
   ./configure --enable-static --enable-vp9-highbitdepth --disable-shared --disable-unit-tests --disable-examples && \
   make -j$(nproc) install && \
+  # Sanity tests
+  pkg-config --exists --modversion --path vpx && \
+  ar -t /usr/local/lib/libvpx.a && \
+  readelf -h /usr/local/lib/libvpx.a && \
+  # Cleanup
   apk del build
 
 FROM scratch
